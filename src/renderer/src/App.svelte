@@ -1,26 +1,52 @@
 <script lang="ts">
-  import Versions from './components/Versions.svelte'
-  import electronLogo from './assets/electron.svg'
-
-  const ipcHandle = (): void => window.electron.ipcRenderer.send('ping')
+  import settings from './pages/settings.svelte'
+  import menus from './pages/menus.svelte'
+  import logs from './pages/logs.svelte'
+  const hash = window.location.hash.slice(1)
+  let activeName = hash || 'settings'
+  const map = new Map([
+    ['settings', settings],
+    ['menus', menus],
+    ['logs', logs]
+  ])
+  $: activeComponent = map.get(activeName)
+  const navList = [
+    ['Settings', 'settings'],
+    ['Menus', 'menus'],
+    ['Logs', 'logs']
+  ]
 </script>
 
-<img alt="logo" class="logo" src={electronLogo} />
-<div class="creator">Powered by electron-vite</div>
-<div class="text">
-  Build an Electron app with
-  <span class="svelte">Svelte</span>
-  and
-  <span class="ts">TypeScript</span>
+<div>
+  {#if !hash}
+    <nav>
+      {#each navList as [label, name] (name)}
+        <label>
+          {label}
+          <input
+            type="radio"
+            style="display: none;"
+            value={name}
+            bind:group={activeName}
+            checked={activeName === name}
+          />
+        </label>
+      {/each}
+    </nav>
+  {/if}
+  <svelte:component this={activeComponent}></svelte:component>
 </div>
-<p class="tip">Please try pressing <code>F12</code> to open the devTool</p>
-<div class="actions">
-  <div class="action">
-    <a href="https://electron-vite.org/" target="_blank" rel="noreferrer">Documentation</a>
-  </div>
-  <div class="action">
-    <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions a11y-missing-attribute-->
-    <a target="_blank" rel="noreferrer" on:click={ipcHandle}>Send IPC</a>
-  </div>
-</div>
-<Versions />
+
+<style>
+  nav {
+    background-color: #999;
+  }
+  label {
+    cursor: pointer;
+    display: inline-block;
+    padding: 1rem;
+  }
+  label:has(:checked) {
+    background-color: #fff;
+  }
+</style>

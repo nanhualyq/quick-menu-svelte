@@ -1,39 +1,31 @@
-import { app, shell, BrowserWindow, ipcMain } from 'electron'
-import { join } from 'path'
-import { electronApp, optimizer, is } from '@electron-toolkit/utils'
-import icon from '../../resources/icon.png?asset'
-
-function createWindow(): void {
-  // Create the browser window.
-  const mainWindow = new BrowserWindow({
-    width: 900,
-    height: 670,
-    show: false,
-    autoHideMenuBar: true,
-    ...(process.platform === 'linux' ? { icon } : {}),
-    webPreferences: {
-      preload: join(__dirname, '../preload/index.js'),
-      sandbox: false
-    }
-  })
-
-  mainWindow.on('ready-to-show', () => {
-    mainWindow.show()
-  })
-
-  mainWindow.webContents.setWindowOpenHandler((details) => {
-    shell.openExternal(details.url)
-    return { action: 'deny' }
-  })
-
-  // HMR for renderer base on electron-vite cli.
-  // Load the remote URL for development or the local html file for production.
-  if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
-    mainWindow.loadURL(process.env['ELECTRON_RENDERER_URL'])
-  } else {
-    mainWindow.loadFile(join(__dirname, '../renderer/index.html'))
-  }
+if (is.dev) {
+  app.setPath('userData', app.getPath('userData') + '-dev')
 }
+
+import { app, BrowserWindow, ipcMain, dialog } from 'electron'
+import { electronApp, optimizer, is } from '@electron-toolkit/utils'
+import execMenu from './libs/execMenu'
+import settings from 'electron-settings'
+import { registerGlobalShortcut } from './libs/globalShortcut'
+import createTray from './libs/tray'
+import { createMainWindow } from './libs/windows'
+import { initialize, errorHandler } from 'electron-log/main'
+import { execSync } from 'child_process'
+import path from 'path'
+
+initialize()
+
+errorHandler.startCatching({
+  showDialog: true,
+  onError({ error }) {
+    dialog.showMessageBox({
+      title: 'An error occurred',
+      message: error.message,
+      detail: error.stack,
+      type: 'error'
+    })
+  }
+})
 
 // This method will be called when Electron has finished
 // initialization and is ready to create browser windows.
@@ -49,15 +41,23 @@ app.whenReady().then(() => {
     optimizer.watchWindowShortcuts(window)
   })
 
-  // IPC test
-  ipcMain.on('ping', () => console.log('pong'))
+  ipcMain.on('execMenu', execMenu)
+  ipcMain.handle('settings:get', (_e, ...rest) => settings.get(...(rest as [])))
+  ipcMain.handle('settings:set', (_e, ...rest) => settings.set(...(rest as [string, string])))
+  ipcMain.handle('toggleMainWindow', () => registerGlobalShortcut())
+  ipcMain.handle('getLogs', () =>
+    execSync(`tail -n 1000 ${path.join(app.getPath('userData'), 'logs/main.log')}`).toString()
+  )
 
-  createWindow()
+  registerGlobalShortcut()
+  createTray()
+
+  createMainWindow()
 
   app.on('activate', function () {
     // On macOS it's common to re-create a window in the app when the
     // dock icon is clicked and there are no other windows open.
-    if (BrowserWindow.getAllWindows().length === 0) createWindow()
+    if (BrowserWindow.getAllWindows().length === 0) createMainWindow()
   })
 })
 

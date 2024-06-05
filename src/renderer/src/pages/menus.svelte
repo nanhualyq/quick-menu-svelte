@@ -52,7 +52,10 @@
   }
 
   function handleKeyup(event: KeyboardEvent & { currentTarget: EventTarget & Window }) {
-    if (isStandalong && event.key === 'Escape') {
+    if (!isStandalong) {
+      return
+    }
+    if (event.key === 'Escape') {
       window.close()
       return
     }

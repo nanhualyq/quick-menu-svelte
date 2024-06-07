@@ -49,7 +49,7 @@ export async function parseWord(text: string) {
 //             },
 //             audio: [
 //               {
-//                 url: 'https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&tl=en_US&q={{context.pluginResult.Word}}',
+//                 url: `https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&tl=en_US&q=${Word}`,
 //                 filename: `google-${Date.now()}.mp3`,
 //                 fields: ['Audio']
 //               }
